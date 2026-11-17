@@ -1,0 +1,72 @@
+--- a/av/codec/context.py
++++ b/av/codec/context.py
+@@ -433,16 +433,17 @@
+ 
+         self._setup_encode_hwframes()
+ 
+-        err_check(
+-            lib.avcodec_open2(self.ptr, self.ptr.codec, cython.address(options.ptr)),
+-            f'avcodec_open2("{self.ptr.codec.name}", {self.options})',
+-        )
++        ret: cython.int
++        with cython.nogil:
++            ret = lib.avcodec_open2(self.ptr, self.ptr.codec, cython.address(options.ptr))
++        err_check(ret, f'avcodec_open2("{self.ptr.codec.name}", {self.options})')
+         self.options = dict(options)
+ 
+     def __dealloc__(self):
+         if self.ptr:
+             lib.av_freep(cython.address(self.ptr.extradata))
+-            lib.avcodec_free_context(cython.address(self.ptr))
++            with cython.nogil:
++                lib.avcodec_free_context(cython.address(self.ptr))
+         if self.parser:
+             lib.av_parser_close(self.parser)
+ 
+--- a/av/codec/hwaccel.py
++++ b/av/codec/hwaccel.py
+@@ -152,15 +152,16 @@
+             c_device = device_bytes
+         c_options: Dictionary = Dictionary(self.options)
+ 
+-        err_check(
+-            lib.av_hwdevice_ctx_create(
++        ret: cython.int
++        with cython.nogil:
++            ret = lib.av_hwdevice_ctx_create(
+                 cython.address(self.ptr),
+                 cython.cast(lib.AVHWDeviceType, self._device_type),
+                 c_device,
+                 c_options.ptr,
+                 self.flags,
+             )
+-        )
++        err_check(ret)
+ 
+     @property
+     def device_type(self):
+@@ -255,15 +256,16 @@
+             c_device = device_bytes
+         c_options: Dictionary = Dictionary(self.options)
+ 
+-        err_check(
+-            lib.av_hwdevice_ctx_create(
++        ret: cython.int
++        with cython.nogil:
++            ret = lib.av_hwdevice_ctx_create(
+                 cython.address(self.ptr),
+                 config.ptr.device_type,
+                 c_device,
+                 c_options.ptr,
+                 self.flags,
+             )
+-        )
++        err_check(ret)
+ 
+     def create(self, codec: Codec, for_encoding: bool = False) -> HWAccel:
+         """Create a new hardware accelerator context with the given codec"""
+--- a/av/about.py
++++ b/av/about.py
+@@ -1 +1 @@
+-__version__ = "19.0.2"
++__version__ = "19.0.2+simpleworship.1"
