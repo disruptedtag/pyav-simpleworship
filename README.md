@@ -18,6 +18,13 @@ locally releases the GIL around `avcodec_open2` and the two `av_hwdevice_ctx_cre
 Python argument preparation and error handling remain under the GIL; only the native operations
 run without it. SimpleWorship gives each decoder to one worker and closes it after decoding ends.
 
+Release `.2` also drops the hardware device reference of `HWDevice` and `HWAccel` (`av_buffer_unref` in
+their `__dealloc__`) outside the GIL. The codec context gives its own reference back without the GIL, but the
+`HWAccel` object holds the last one: freeing a D3D11VA decoder destroyed the device with the GIL held for
+22-25 ms on the author's machine, and a frame was lost at the end of every fade from a hardware-decoded
+video. With `.2` the teardown still takes about 22 ms, but other Python threads run meanwhile (about 1 ms
+of starvation, measured with a ticker thread).
+
 The wheel contains the same FFmpeg library versions as the original 19.0.2 installation:
 avcodec/avformat/avdevice 63.1.102, avutil 61.1.102, avfilter 12.1.102,
 swscale 10.1.102 and swresample 7.1.102. The local version identifies the patched build;
@@ -37,17 +44,18 @@ The tested compiler was MSVC 14.44.35207. The official upstream build procedure 
 ```text
 python scripts/fetch-vendor.py --config-file scripts/ffmpeg-latest.json ../vendor
 python setup.py --ffmpeg-dir=../vendor bdist_wheel
-python -m delvewheel repair --add-path ../vendor/bin --wheel-dir ../wheelhouse dist/av-19.0.2+simpleworship.1-cp312-abi3-win_amd64.whl
+python -m delvewheel repair --add-path ../vendor/bin --wheel-dir ../wheelhouse dist/av-19.0.2+simpleworship.2-cp312-abi3-win_amd64.whl
 ```
 
-The patch uses the standard LF unified-diff format. Application Python, documentation and requirements retain CRLF.
+The patch uses the standard LF unified-diff format (`git apply` refuses a CRLF copy of it against the LF source). Application Python, documentation and requirements retain CRLF.
 Generated wheel timestamps need not be identical between rebuilds; the shipped artifacts are identified below.
 
 | Artifact | SHA-256 |
 | --- | --- |
 | Original source ZIP | c5c46e5b8ec57b26990be7a42a7f41ed1c0c6263b672b2edbe73d916153a0e16 |
 | Official FFmpeg bundle `9.0.2-1/ffmpeg-windows-x86_64.tar.gz` | add88a2e31f63be16f4ba671862770f7f9313de2f8d2967b1eade4c18bf4b093 |
-| Shipped patched wheel | 640c4dddef3b001e54b27b8aa9d4d2a5eca74dc482f055544a56a710a6cb1971 |
+| Shipped patched wheel `.2` | 96ea327dc6a5960df885e43338edd34f81d9a557ccce5c6976d5b8190d900f21 |
+| Earlier wheel `.1` (release `v19.0.2-simpleworship.1`) | 640c4dddef3b001e54b27b8aa9d4d2a5eca74dc482f055544a56a710a6cb1971 |
 
 ## Install and retire the patch
 

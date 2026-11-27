@@ -1,6 +1,15 @@
+diff --git a/av/about.py b/av/about.py
+index 14d428a..13604e5 100644
+--- a/av/about.py
++++ b/av/about.py
+@@ -1 +1 @@
+-__version__ = "19.0.2"
++__version__ = "19.0.2+simpleworship.2"
+diff --git a/av/codec/context.py b/av/codec/context.py
+index ed5bf9e..7cfe443 100644
 --- a/av/codec/context.py
 +++ b/av/codec/context.py
-@@ -433,16 +433,17 @@
+@@ -433,16 +433,17 @@ class CodecContext:
  
          self._setup_encode_hwframes()
  
@@ -23,9 +32,11 @@
          if self.parser:
              lib.av_parser_close(self.parser)
  
+diff --git a/av/codec/hwaccel.py b/av/codec/hwaccel.py
+index 44e78c0..5574f22 100644
 --- a/av/codec/hwaccel.py
 +++ b/av/codec/hwaccel.py
-@@ -152,15 +152,16 @@
+@@ -152,15 +152,16 @@ class HWDevice:
              c_device = device_bytes
          c_options: Dictionary = Dictionary(self.options)
  
@@ -45,7 +56,17 @@
  
      @property
      def device_type(self):
-@@ -255,15 +256,16 @@
+@@ -168,7 +169,8 @@ class HWDevice:
+ 
+     def __dealloc__(self):
+         if self.ptr:
+-            lib.av_buffer_unref(cython.address(self.ptr))
++            with cython.nogil:
++                lib.av_buffer_unref(cython.address(self.ptr))
+ 
+ 
+ @cython.final
+@@ -255,15 +257,16 @@ class HWAccel:
              c_device = device_bytes
          c_options: Dictionary = Dictionary(self.options)
  
@@ -65,8 +86,10 @@
  
      def create(self, codec: Codec, for_encoding: bool = False) -> HWAccel:
          """Create a new hardware accelerator context with the given codec"""
---- a/av/about.py
-+++ b/av/about.py
-@@ -1 +1 @@
--__version__ = "19.0.2"
-+__version__ = "19.0.2+simpleworship.1"
+@@ -283,4 +286,5 @@ class HWAccel:
+ 
+     def __dealloc__(self):
+         if self.ptr:
+-            lib.av_buffer_unref(cython.address(self.ptr))
++            with cython.nogil:
++                lib.av_buffer_unref(cython.address(self.ptr))
